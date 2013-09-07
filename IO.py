@@ -1,7 +1,10 @@
 #!/usr/bin/python
 
 import os
+import re
 from HTMLParser import HTMLParser
+from collections import defaultdict
+import csv
 
 class TitleParser(HTMLParser):
     def reset(self):
@@ -9,34 +12,38 @@ class TitleParser(HTMLParser):
         self.tag_flag = False
         self.data_list = []
     def handle_starttag(self, tag, attrs):
-        if tag.upper() == "TITLE":
+        if tag.upper() == "BODY":
             self.tag_flag = True
     def handle_endtag(self, tag):
-        if tag.upper() == "TITLE":
+        if tag.upper() == "BODY":
             self.tag_flag = False
     def handle_data(self, data):
         if self.tag_flag:
             self.data_list.append(data)
-
-def write_to_file(data):
-   file = open("out.txt","w")
-   for list in data:
-      for item in data[list]:
-         file.write(item)
-         file.write("\n")
-      file.write("\n\n")
-
-
 
 # Main
 path = r'reuters'
 data = {}
 parser = TitleParser()
 
-for dir_entry in os.listdir(path):
-    dir_entry_path = os.path.join(path, dir_entry)
-    with open(dir_entry_path, 'r') as my_file:
-         parser.feed(my_file.read())
-         data[dir_entry] = parser.data_list
+file = open("reuters/reut2-000.sgm")
+content = re.sub('&(.+?);', '',file.read())  #remove &xxx;
+parser.feed(content)
+file.close()
 
-write_to_file(data)
+d = defaultdict(int)
+for item in parser.data_list:
+   item = re.sub( '[<>]', '', item) #remove <, >
+   item = item.replace('\n','') #remove newlines
+   list = item.split()   #tokenize
+   for i in list:
+      d[i] += 1
+
+file = open("out.txt","w")
+writer = csv.writer(file,delimiter = ':')
+for key, value in d.items():
+   writer.writerow([key, value])
+
+file.close()
+
+
