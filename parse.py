@@ -2,19 +2,88 @@
 
 from HTMLParser import HTMLParser
 
+# class for parsing input file.
+# This class creates a list of records.
+# Each record represents a Reuters article.
+# A record contains 3 fields:
+#    1. topics
+#          This is a python list of topics
+#          Each topic is a string
+#    2. title
+#    3. text
+
 class TitleParser(HTMLParser):
+
+    # Set all flags to False and initialize records_list
     def reset(self):
+
         HTMLParser.reset(self)
-        self.tag_flag = False
-        self.data_list = []
+	self.topics_flag = False
+	self.title_flag = False
+	self.body_flag = False
+	self.topic_d_flag = False
+	# List of records: each record represents an article
+        self.records_list = []
+
+
     def handle_starttag(self, tag, attrs):
-        if tag.upper() == "BODY":
-            self.tag_flag = True
+
+        # Initialize a dictionary for this article's record 
+        if tag.upper() == "REUTERS":
+	    self.record = {}
+
+        # A topic is found
+	elif tag.upper() == "D":
+	    if self.topics_flag:
+	        self.topic_d_flag = True
+
+        # Initialize a list of topics
+	elif tag.upper() == "TOPICS":
+            self.topics_flag = True
+	    self.topics_list = []
+
+	elif tag.upper() == "TITLE":
+            self.title_flag = True
+
+	elif tag.upper() == "BODY":
+            self.body_flag = True
+
+
+
     def handle_endtag(self, tag):
-        if tag.upper() == "BODY":
-            self.tag_flag = False
+
+        # Append current record to the records_list when 
+	# the article ends
+        if tag.upper() == "REUTERS":
+            self.records_list.append(self.record)
+
+        elif tag.upper() == "D":
+	    if self.topics_flag:
+	        self.topic_d_flag = False
+
+	elif tag.upper() == "TOPICS":
+	    self.record["topics"] = topics_list
+            self.topics_flag = False
+
+	elif tag.upper() == "TITLE":
+            self.title_flag = False
+
+	elif tag.upper() == "BODY":
+            self.body_flag = False
+
+
+
     def handle_data(self, data):
-        if self.tag_flag:
-            self.data_list.append(data)
+
+        # Append this topic to the current topics list
+	elif self.topic_d_flag:
+	    if self.topics_flag:
+	        self.topics_list.append(data)
+
+	elif self.title_flag:
+	    self.record["title"] = data 
+
+        elif self.body_flag:
+	    self.record["text"] = data
 
 
