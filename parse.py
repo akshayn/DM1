@@ -5,7 +5,7 @@ from HTMLParser import HTMLParser
 # class for parsing input file.
 # This class creates a list of records.
 # Each record represents a Reuters article.
-# A record contains 3 fields:
+# A record is a dictionary and contains 3 fields (keys):
 #    1. topics
 #          This is a python list of topics
 #          Each topic is a string
@@ -24,6 +24,7 @@ class TitleParser(HTMLParser):
 	self.topic_d_flag = False
 	# List of records: each record represents an article
         self.records_list = []
+	self.topics_list = []
 
 
     def handle_starttag(self, tag, attrs):
@@ -37,7 +38,7 @@ class TitleParser(HTMLParser):
 	    if self.topics_flag:
 	        self.topic_d_flag = True
 
-        # Initialize a list of topics
+        # Initialize the list of topics to empty
 	elif tag.upper() == "TOPICS":
             self.topics_flag = True
 	    self.topics_list = []
@@ -62,7 +63,7 @@ class TitleParser(HTMLParser):
 	        self.topic_d_flag = False
 
 	elif tag.upper() == "TOPICS":
-	    self.record["topics"] = topics_list
+	    self.record["topics"] = self.topics_list
             self.topics_flag = False
 
 	elif tag.upper() == "TITLE":
@@ -76,7 +77,7 @@ class TitleParser(HTMLParser):
     def handle_data(self, data):
 
         # Append this topic to the current topics list
-	elif self.topic_d_flag:
+        if self.topic_d_flag:
 	    if self.topics_flag:
 	        self.topics_list.append(data)
 
