@@ -82,9 +82,9 @@ class TitleParser(HTMLParser):
 	        self.topics_list.append(data)
 
 	elif self.title_flag:
-	    self.record["title"] = data 
+	    self.record["title"] = data.lower() 
 
         elif self.body_flag:
-	    self.record["text"] = data
+	    self.record["text"] = data.lower()
 
 
