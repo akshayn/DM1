@@ -2,6 +2,7 @@
 
 import os
 import re
+import gc
 import operator
 from parse import TitleParser
 from collections import defaultdict
@@ -13,6 +14,8 @@ PATH = r'reuters'
 WORD_REGEX = '[a-z]+'
 NORMAL_WEIGHT = 1
 TITLE_WEIGHT = 10
+TOPIC_WEIGHT = 1
+PLACES_WEIGHT = 1
 THRESHOLD_PERCENTAGE = 1
 
 # Strip/replace specific characters
@@ -97,6 +100,53 @@ word_list = []
 for i in trimmed_list:
     if not i[0] in stopwords:
         word_list.append(i[0])
+
+# Add topics and places to word_list
+for record in record_freq_list:
+    topics_list = record.get("topics", [])
+    for topic in topics_list:
+        if topic not in word_list:
+            word_list.append(topic)
+
+for record in record_freq_list:
+    places_list = record.get("places", [])
+    for place in places_list:
+        if place not in word_list:
+            word_list.append(place)
+
+
+# Create data matrix
+data_matrix = []
+for record in record_freq_list:
+    matrix_row = defaultdict(int)
+    freq_dict = record.get("freq_dict", {})
+    topics = record.get("topics", [])
+    places = record.get("places", [])
+    for word in word_list:
+        if word in freq_dict:
+	    matrix_row[word] += freq_dict[word]
+	if word in topics:
+	    matrix_row[word] += TOPIC_WEIGHT
+	if word in places:
+	    matrix_row[word] += PLACE_WEIGHT
+    data_matrix.append(matrix_row)
+
+gc.collect()
+
+# Write data matrix in a file
+dmat_file = open("data_matrix.csv", "w")
+for word in word_list:
+    dmat_file.write("," + word)
+dmat_file.write("\n")
+article_index = 1
+for matrix_row in data_matrix:
+    dmat_file.write("\"Article " + str(article_index) + "\"")
+    for word in word_list:
+        dmat_file.write("," + str(matrix_row[word]))
+    dmat_file.write("\n")
+    article_index += 1
+dmat_file.close()
+        
 
 print len(trimmed_list)
 print len(word_list)
