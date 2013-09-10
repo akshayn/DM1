@@ -1,27 +1,52 @@
 #!/usr/bin/python
 
-from parse import TitleParser
 import os
 import re
+import operator
+from parse import TitleParser
 from collections import defaultdict
 from nltk.stem.wordnet import WordNetLemmatizer
-import operator
+from nltk.stem.porter import PorterStemmer
 
+# Constants
+PATH = r'reuters'
+WORD_REGEX = '[a-z]+'
+TITLE_WEIGHT = 10
+NORMAL_WEIGHT = 1
+THRESHOLD_PERCENTAGE = 10
+
+# Strip/replace specific characters
 def stripchars(string):
     string = re.sub( '[<>]', '', string) #remove <, >
     string = string.replace('\n',' ') #remove newlines    
     return string
 
-# Constants
-path = r'reuters'
-wordnum_regex = '[a-z]+|[0-9]+.[0-9]+'
-word_regex = '[a-z]+'
-title_weight = 10
-normal_weight = 1
+# Return dictionary specifying the word count in the title and text of article
+def get_frequency(record):
+    freq_dict = defaultdict(int)
+
+    title = record.get("title", "default")
+    title = stripchars(title)
+    for word in re.findall(WORD_REGEX, title):
+        freq_dict[word] += TITLE_WEIGHT
+
+    text = record.get("text", "default")
+    text = stripchars(text)
+    for word in re.findall(WORD_REGEX, text):
+        freq_dict[word] += NORMAL_WEIGHT
+
+    return freq_dict
+
+def find_index(sorted_tuple_list, value):
+    for i, v in enumerate(sorted_tuple_list):
+        if v[1] > value:
+            return i
+    return -1        
+
 
 parser = TitleParser()
 lemma = WordNetLemmatizer()
-d = defaultdict(int)    #TODO: remove
+stemmer = PorterStemmer()
 
 # record_freq_list is a list of the form
 # record_freq_list = [
@@ -38,50 +63,69 @@ d = defaultdict(int)    #TODO: remove
 record_freq_list = []
 word_article_freq = defaultdict(int)   # Store the number of articles in which a word appears
 
-out  = open("out.txt","w")
-out1  = open("out1.txt","w")
+#load stopwords
+file = open('stopwords')
+stopwords = file.read().split()
+file.close()
 
-for dir_entry in os.listdir(path):
-    dir_entry_path = os.path.join(path, dir_entry)
+for dir_entry in os.listdir(PATH):   #each file
+    dir_entry_path = os.path.join(PATH, dir_entry)
     file = open(dir_entry_path)
-
-    content = re.sub('&(.+?);|,|\'|"|`', '',file.read())  #remove &xxx; and comma
+    content = re.sub('&(.+?);|,|\'|"', '',file.read())  #remove &xxx; and comma and quotes
     parser.feed(content)
-
     file.close()
 
-    for record in parser.records_list:
-        record_freq = {}
-
+    for record in parser.records_list: #each article
 	topics_list = record.get("topics", [])
-        record_freq['class'] = ', '.join(topics_list)
-
-        freq_dict = defaultdict(int)
-        title = record.get("title", "default")
-        title = stripchars(title)
-        for i in re.findall(re.compile(word_regex), title):
-            word = lemma.lemmatize(i)
-            d[word] += 1
-            freq_dict[word] += title_weight
-
-	text = record.get("text", "default")
-        text = stripchars(text)
-        for i in re.findall(re.compile(word_regex), text):
-            word = lemma.lemmatize(i)
-            d[word] += 1
-            freq_dict[word] += normal_weight
-
-        record_freq['freq_dict'] = freq_dict
-        record_freq_list.append(record_freq)
+        topics_string = ', '.join(topics_list)
+        freq_dict = get_frequency(record)
+        record_freq_list.append( {'class':topics_string, 'freq_dict':freq_dict} )
 
         for word in freq_dict.keys():
             word_article_freq[word] += 1
 
-d_list = sorted(d.iteritems(), key=operator.itemgetter(0))
-for i in d_list:
-    out.write(i[0] + ' ' + str(i[1]) + '\n')
 
 
-for key, value in word_article_freq.iteritems():
-    out1.write(key + ' ' + str(value) + '\n')
 
+
+        #lemmatize and ignore stopwords
+#        for key, value in freq_dict_temp.iteritems():
+#            #key = lemma.lemmatize(key)                      
+#            if key in stopwords:
+#                continue
+#            key = stemmer.stem(key)
+#            freq_dict[key] += value
+
+
+
+
+
+#trimming
+# Sort the word vs number of article frequency list
+word_article_freq_sorted = sorted(word_article_freq.iteritems(), key=operator.itemgetter(1))
+max_freq = word_article_freq_sorted[-1][1]
+lower_threshold = 100#max_freq/100*THRESHOLD_PERCENTAGE
+upper_threshold = 1200#max_freq/100*(100 - THRESHOLD_PERCENTAGE)
+
+lower_index = find_index(word_article_freq_sorted, lower_threshold)
+upper_index = find_index(word_article_freq_sorted, upper_threshold)
+print lower_index
+print upper_index
+
+trimmed_word_article_freq = word_article_freq_sorted[lower_index:upper_index]
+print len(trimmed_word_article_freq)
+
+#Output
+out  = open("out.txt","w")
+out1  = open("out1.txt","w")
+
+
+index = 1
+for i in word_article_freq_sorted:
+    out1.write(str(index) + ' ' + str(i[1]) + '\n')
+    index += 1
+
+print len(word_article_freq_sorted)
+
+out.close()
+out1.close()
