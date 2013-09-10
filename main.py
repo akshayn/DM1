@@ -13,7 +13,7 @@ PATH = r'reuters'
 WORD_REGEX = '[a-z]+'
 TITLE_WEIGHT = 10
 NORMAL_WEIGHT = 1
-THRESHOLD_PERCENTAGE = 10
+THRESHOLD_PERCENTAGE = 1
 
 # Strip/replace specific characters
 def stripchars(string):
@@ -37,6 +37,8 @@ def get_frequency(record):
 
     return freq_dict
 
+# sorted_tuple_list is a list of tuples
+# Find the index of tuple whose second element equals value
 def find_index(sorted_tuple_list, value):
     for i, v in enumerate(sorted_tuple_list):
         if v[1] > value:
@@ -48,18 +50,10 @@ parser = TitleParser()
 lemma = WordNetLemmatizer()
 stemmer = PorterStemmer()
 
-# record_freq_list is a list of the form
-# record_freq_list = [
-#                      {
-#                        'class': "topic1, topic2, ..."
-#                        'freq_dict' : {
-#                                       'word1': 2
-#                                       'word2': 5
-#                                        ...
-#                                      }
-#                       },
-#                       .....
-#                    ]
+# record_freq_list is a list of dictionaries
+# Each dictionary consists of:
+# 1. class - This is string of concatenated topics
+# 2. freq_dict - This is dictionary consisting of word-count pairs
 record_freq_list = []
 word_article_freq = defaultdict(int)   # Store the number of articles in which a word appears
 
@@ -101,19 +95,24 @@ for dir_entry in os.listdir(PATH):   #each file
 
 
 #trimming
-# Sort the word vs number of article frequency list
+# Sort the word vs number of article frequency list by the frequency
 word_article_freq_sorted = sorted(word_article_freq.iteritems(), key=operator.itemgetter(1))
 max_freq = word_article_freq_sorted[-1][1]
-lower_threshold = 100#max_freq/100*THRESHOLD_PERCENTAGE
-upper_threshold = 1200#max_freq/100*(100 - THRESHOLD_PERCENTAGE)
+lower_threshold = max_freq/100*THRESHOLD_PERCENTAGE
+upper_threshold = max_freq/100*(100 - THRESHOLD_PERCENTAGE)
 
 lower_index = find_index(word_article_freq_sorted, lower_threshold)
 upper_index = find_index(word_article_freq_sorted, upper_threshold)
-print lower_index
-print upper_index
+trimmed_list = word_article_freq_sorted[lower_index:upper_index]
 
-trimmed_word_article_freq = word_article_freq_sorted[lower_index:upper_index]
-print len(trimmed_word_article_freq)
+# Remove stopwords
+word_list = []
+for i in trimmed_list:
+    if not i[0] in stopwords:
+        word_list.append(i[0])
+
+print len(trimmed_list)
+print len(word_list)
 
 #Output
 out  = open("out.txt","w")
@@ -122,7 +121,7 @@ out1  = open("out1.txt","w")
 
 index = 1
 for i in word_article_freq_sorted:
-    out1.write(str(index) + ' ' + str(i[1]) + '\n')
+    out1.write(i[0] + ' ' + str(i[1]) + '\n')
     index += 1
 
 print len(word_article_freq_sorted)
