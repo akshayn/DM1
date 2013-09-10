@@ -11,8 +11,8 @@ from nltk.stem.porter import PorterStemmer
 # Constants
 PATH = r'reuters'
 WORD_REGEX = '[a-z]+'
-TITLE_WEIGHT = 10
 NORMAL_WEIGHT = 1
+TITLE_WEIGHT = 10
 THRESHOLD_PERCENTAGE = 1
 
 # Strip/replace specific characters
@@ -52,7 +52,8 @@ stemmer = PorterStemmer()
 
 # record_freq_list is a list of dictionaries
 # Each dictionary consists of:
-# 1. class - This is string of concatenated topics
+# 1. topics - This is a list of topics
+# 2. places - This is a list of places
 # 2. freq_dict - This is dictionary consisting of word-count pairs
 record_freq_list = []
 word_article_freq = defaultdict(int)   # Store the number of articles in which a word appears
@@ -71,26 +72,12 @@ for dir_entry in os.listdir(PATH):   #each file
 
     for record in parser.records_list: #each article
 	topics_list = record.get("topics", [])
-        topics_string = ', '.join(topics_list)
+        places_list = record.get("places", [])
         freq_dict = get_frequency(record)
-        record_freq_list.append( {'class':topics_string, 'freq_dict':freq_dict} )
+        record_freq_list.append( {'topics':topics_list, 'places':places_list,'freq_dict':freq_dict} )
 
         for word in freq_dict.keys():
             word_article_freq[word] += 1
-
-
-
-
-
-        #lemmatize and ignore stopwords
-#        for key, value in freq_dict_temp.iteritems():
-#            #key = lemma.lemmatize(key)                      
-#            if key in stopwords:
-#                continue
-#            key = stemmer.stem(key)
-#            freq_dict[key] += value
-
-
 
 
 
@@ -114,17 +101,8 @@ for i in trimmed_list:
 print len(trimmed_list)
 print len(word_list)
 
-#Output
+#TODO : remove later
 out  = open("out.txt","w")
-out1  = open("out1.txt","w")
-
-
-index = 1
 for i in word_article_freq_sorted:
-    out1.write(i[0] + ' ' + str(i[1]) + '\n')
-    index += 1
-
-print len(word_article_freq_sorted)
-
+    out.write(i[0] + ' ' + str(i[1]) + '\n')
 out.close()
-out1.close()
