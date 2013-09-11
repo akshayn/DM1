@@ -5,10 +5,8 @@ import re
 import operator
 from parse import TitleParser
 from collections import defaultdict
-from nltk.stem.wordnet import WordNetLemmatizer
-from nltk.stem.porter import PorterStemmer
-
 import timeit
+import sys
 
 start = timeit.default_timer()
 
@@ -63,8 +61,6 @@ def find_index(sorted_tuple_list, value):
 record_freq_list = []  # Store the word count for each article in this list
 word_article_freq = defaultdict(int)   # Store the number of articles in which a word appears
 parser = TitleParser()  # Used for parsing the files
-lemma = WordNetLemmatizer()
-stemmer = PorterStemmer()
 
 #load stopwords
 file = open('stopwords')
@@ -88,19 +84,22 @@ for dir_entry in os.listdir(PATH):   #each file
         for word in freq_dict.keys():
             word_article_freq[word] += 1
 
+    print "Reading file: " + dir_entry_path
 
 parse_time = timeit.default_timer()
-print "Parsed all articles: "+ str(parse_time - start)
+print "Parsed all articles in "+ str(parse_time - start) + " seconds"
 
 
 # Sort the word_article_freq dictionary by the value
 word_article_freq_sorted = sorted(word_article_freq.iteritems(), key=operator.itemgetter(1))
 
 # Write word_article_freq_sorted i.e. Inverse Document Frequency to file
+print "Writing inverse document frequency to IDF.txt"
 idf_file = open("IDF.txt","w")
 for i in word_article_freq_sorted:
-    idf_file.write(i[0] + " " + i[1] + "\n")
+    idf_file.write(i[0] + " " + str(i[1]) + "\n")
 idf_file.close()
+print "Finished writing IDF.txt"
 
 # Find the thresholds on IDF and trim it
 max_freq = word_article_freq_sorted[-1][1]
@@ -112,6 +111,7 @@ upper_index = find_index(word_article_freq_sorted, upper_threshold)
 trimmed_list = word_article_freq_sorted[lower_index:upper_index]
 
 # Remove stopwords
+print "Creating word list..."
 word_list = []
 for i in trimmed_list:
     if not i[0] in stopwords:
@@ -130,10 +130,11 @@ for record in record_freq_list:
         if place not in word_list:
             word_list.append(place)
 
-print "Number of Words under consideration: " + str(len(word_list))
+print "Word list created... Number of words: " + str(len(word_list))
 
 
 # Create data matrix
+print "Creating data matrix..."
 data_matrix = []
 for record in record_freq_list:
     matrix_row = defaultdict(int)
@@ -150,32 +151,34 @@ for record in record_freq_list:
     data_matrix.append(matrix_row)
 
 dm_create_time = timeit.default_timer()
-print "Data matrix create time: " + str(dm_create_time -start)
+print "Data matrix created in " + str(dm_create_time -start) + " seconds"
 
 
 # Write data matrix in a file
+print "Writing data matrix in file data_matrix.csv"
 dmat_file = open("data_matrix.csv", "w")
 for word in word_list:
-    dmat_file.write(", " + word)
+    dmat_file.write("," + word)
 dmat_file.write("\n")
 
 article_index = 1
 for matrix_row in data_matrix[:1000]:
-    string = "\"Article " + str(article_index) + "\""
+    string = "A " + str(article_index) + " "
     for word in word_list:
-        string += ", " + str(matrix_row[word])
+        string += "," + str(matrix_row[word])
     dmat_file.write(string + "\n")
     article_index += 1
 dmat_file.close()
         
 dm_write_time = timeit.default_timer()
-print "Data matrix write time: " + str(dm_write_time -start)
+print "Data matrix written in " + str(dm_write_time -start) + " seconds"
 
 
 # Write transaction matrix to a file
+print "Writing transaction matrix in file transaction_matrix.csv"
 tmat_file = open("transaction_matrix.csv", "w")
 article_index = 1
-for matrix_row in data_matrix:
+for matrix_row in data_matrix[:1000]:
     string = "\"Article " + str(article_index) + "\""
     for word in word_list:
         if matrix_row[word] > 0:
@@ -184,6 +187,10 @@ for matrix_row in data_matrix:
     article_index += 1
 tmat_file.close()
 
+dm_write_time = timeit.default_timer()
+print "Transaction matrix written in " + str(dm_write_time -start) + " seconds"
+
 end = timeit.default_timer()
 print "Total Execution Time :" + str(end- start)
 
+sys.exit()
