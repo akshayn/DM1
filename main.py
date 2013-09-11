@@ -162,7 +162,7 @@ for word in word_list:
 dmat_file.write("\n")
 
 article_index = 1
-for matrix_row in data_matrix[:1000]:
+for matrix_row in data_matrix:
     string = "A " + str(article_index) + " "
     for word in word_list:
         string += "," + str(matrix_row[word])
