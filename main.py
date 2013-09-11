@@ -2,6 +2,7 @@
 
 import os
 import re
+import math
 import operator
 from parse import TitleParser
 from collections import defaultdict
@@ -13,7 +14,7 @@ start = timeit.default_timer()
 PATH = r'reuters'
 WORD_REGEX = '[a-z]+'
 NORMAL_WEIGHT = 1
-TITLE_WEIGHT = 10
+TITLE_WEIGHT = 5
 TOPIC_WEIGHT = 1
 PLACES_WEIGHT = 1
 THRESHOLD_PERCENTAGE = 1
@@ -48,12 +49,13 @@ def find_index(sorted_tuple_list, value):
             return i
     return -1        
 
-# Write word_article_freq_sorted i.e. Inverse Document Frequency to file
+# Compute and write Document Frequency and Inverse Document Frequency to file
 def write_IDF(word_article_freq_sorted):
     print "Writing inverse document frequency to IDF.txt"
+    total_docs= float(len(word_article_freq_sorted))
     idf_file = open("IDF.txt","w")
     for i in word_article_freq_sorted:
-        idf_file.write(i[0] + " " + str(i[1]) + "\n")
+        idf_file.write(i[0] + " " + str(i[1]) + " " + str(math.log(total_docs/i[1])) + "\n")
     idf_file.close()
 
 # Find the thresholds on IDF and trim it
@@ -200,7 +202,7 @@ print "Parsed all articles in "+ str(round(parse_time,2)) + " seconds"
 # Sort the word_article_freq dictionary by the value
 word_article_freq_sorted = sorted(word_article_freq.iteritems(), key=operator.itemgetter(1))
 
-# Write word_article_freq_sorted i.e. Inverse Document Frequency to file
+# Compute and write Document Frequency and Inverse Document Frequency to file
 write_IDF(word_article_freq_sorted)
 
 # Find the thresholds on IDF and trim it
