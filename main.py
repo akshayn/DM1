@@ -6,7 +6,6 @@ import operator
 from parse import TitleParser
 from collections import defaultdict
 import timeit
-import sys
 
 start = timeit.default_timer()
 
@@ -49,9 +48,117 @@ def find_index(sorted_tuple_list, value):
             return i
     return -1        
 
+# Write word_article_freq_sorted i.e. Inverse Document Frequency to file
+def write_IDF(word_article_freq_sorted):
+    print "Writing inverse document frequency to IDF.txt"
+    idf_file = open("IDF.txt","w")
+    for i in word_article_freq_sorted:
+        idf_file.write(i[0] + " " + str(i[1]) + "\n")
+    idf_file.close()
+
+# Find the thresholds on IDF and trim it
+def get_trimmed_list(word_article_freq_sorted):
+    max_freq = word_article_freq_sorted[-1][1]
+    lower_threshold = max_freq/100*THRESHOLD_PERCENTAGE
+    upper_threshold = max_freq/100*(100 - THRESHOLD_PERCENTAGE)
+
+    lower_index = find_index(word_article_freq_sorted, lower_threshold)
+    upper_index = find_index(word_article_freq_sorted, upper_threshold)
+    trimmed_list = word_article_freq_sorted[lower_index:upper_index]
+    return trimmed_list
+
+# Remove stopwords
+def remove_stopwords(trimmed_list):
+    print "Creating word list..."
+    word_list = []
+    for i in trimmed_list:
+        if not i[0] in stopwords:
+            word_list.append(i[0])
+    return word_list
+
+# Add topics and places to word_list
+def add_topics_places_to_word_list(word_list, record_freq_list):
+    for record in record_freq_list:
+        topics_list = record.get("topics", [])
+        for topic in topics_list:
+            if topic not in word_list:
+                word_list.append(topic)
+
+    for record in record_freq_list:
+        places_list = record.get("places", [])
+        for place in places_list:
+            if place not in word_list:
+                word_list.append(place)
+    return word_list
+
+# Write the word list to word_list.txt
+def write_word_list(word_list):
+    print "Writing word list in file word_list.txt"
+    word_file = open('word_list.txt','w')
+    for word in word_list:
+        word_file.write(word + '\n')
+    word_file.close()
+
+# Create data matrix
+def create_data_matrix(record_freq_list):
+    count = 0
+    data_matrix = []
+    for record in record_freq_list:
+        matrix_row = defaultdict(int)
+        freq_dict = record.get("freq_dict", {})
+        topics = record.get("topics", [])
+        places = record.get("places", [])
+        for word in word_list:
+            if word in freq_dict:
+	        matrix_row[word] += freq_dict[word]
+            if word in topics:
+	        matrix_row[word] += TOPIC_WEIGHT
+            if word in places:
+	        matrix_row[word] += PLACE_WEIGHT
+        data_matrix.append(matrix_row)
+        count += 1
+        if count % 5000 == 0:
+            print str(count) + " rows created"
+    print "Total " + str(count) + " rows created"
+    return data_matrix
+
+# Write data matrix to data_matrix.csv
+def write_data_matrix(data_matrix, word_list):
+    print "Writing data matrix in file data_matrix.csv"
+    dmat_file = open("data_matrix.csv", "w")
+    for word in word_list:
+        dmat_file.write("," + word)
+    dmat_file.write("\n")
+
+    article_index = 1
+    for matrix_row in data_matrix:
+        string = "Article " + str(article_index)
+        for word in word_list:
+            string += "," + str(matrix_row[word])
+        dmat_file.write(string + "\n")
+        article_index += 1
+    dmat_file.close()
+
+# Write transaction matrix to transaction_matrix.csv
+def write_transaction_matrix(data_matrix, word_list):
+    print "Writing transaction matrix in file transaction_matrix.csv"
+    tmat_file = open("transaction_matrix.csv", "w")
+    article_index = 1
+    for matrix_row in data_matrix:
+        string = "Article " + str(article_index)
+        for word in word_list:
+            if matrix_row[word] > 0:
+                string += ", " + word
+        tmat_file.write(string + "\n")
+        article_index += 1
+    tmat_file.close()
 
 
 
+
+########
+# Main #
+########
 
 # record_freq_list is a list, with each element a dictionary.
 # The dictionary(for an aricle) consists of:
@@ -94,111 +201,42 @@ print "Parsed all articles in "+ str(round(parse_time,2)) + " seconds"
 word_article_freq_sorted = sorted(word_article_freq.iteritems(), key=operator.itemgetter(1))
 
 # Write word_article_freq_sorted i.e. Inverse Document Frequency to file
-print "Writing inverse document frequency to IDF.txt"
-idf_file = open("IDF.txt","w")
-for i in word_article_freq_sorted:
-    idf_file.write(i[0] + " " + str(i[1]) + "\n")
-idf_file.close()
-print "Finished writing IDF.txt"
+write_IDF(word_article_freq_sorted)
 
 # Find the thresholds on IDF and trim it
-max_freq = word_article_freq_sorted[-1][1]
-lower_threshold = max_freq/100*THRESHOLD_PERCENTAGE
-upper_threshold = max_freq/100*(100 - THRESHOLD_PERCENTAGE)
-
-lower_index = find_index(word_article_freq_sorted, lower_threshold)
-upper_index = find_index(word_article_freq_sorted, upper_threshold)
-trimmed_list = word_article_freq_sorted[lower_index:upper_index]
+trimmed_list = get_trimmed_list(word_article_freq_sorted)
 
 # Remove stopwords
-print "Creating word list..."
-word_list = []
-for i in trimmed_list:
-    if not i[0] in stopwords:
-        word_list.append(i[0])
+word_list = remove_stopwords(trimmed_list)
 
 # Add topics and places to word_list
-for record in record_freq_list:
-    topics_list = record.get("topics", [])
-    for topic in topics_list:
-        if topic not in word_list:
-            word_list.append(topic)
-
-for record in record_freq_list:
-    places_list = record.get("places", [])
-    for place in places_list:
-        if place not in word_list:
-            word_list.append(place)
+word_list = add_topics_places_to_word_list(word_list, record_freq_list)
 
 print "Word list created... Number of words: " + str(len(word_list))
 
+# Write the word list
+write_word_list(word_list)
 
 # Create data matrix
 print "Creating data matrix..."
 dm_create_time = -timeit.default_timer()
-count = 0
-data_matrix = []
-for record in record_freq_list:
-    matrix_row = defaultdict(int)
-    freq_dict = record.get("freq_dict", {})
-    topics = record.get("topics", [])
-    places = record.get("places", [])
-    for word in word_list:
-        if word in freq_dict:
-	    matrix_row[word] += freq_dict[word]
-	if word in topics:
-	    matrix_row[word] += TOPIC_WEIGHT
-	if word in places:
-	    matrix_row[word] += PLACE_WEIGHT
-    data_matrix.append(matrix_row)
-    count += 1
-    if count % 5000 == 0:
-        print str(count) + " rows created"
-print "Total " + str(count) + " rows created"
-
+data_matrix = create_data_matrix(record_freq_list)
 dm_create_time += timeit.default_timer()
 print "Data matrix created in " + str(round(dm_create_time,2)) + " seconds"
 
-
-# Write data matrix in a file
+# Write data matrix to data_matrix.csv
 dm_write_time = -timeit.default_timer()
-print "Writing data matrix in file data_matrix.csv"
-dmat_file = open("data_matrix.csv", "w")
-for word in word_list:
-    dmat_file.write("," + word)
-dmat_file.write("\n")
-
-article_index = 1
-for matrix_row in data_matrix:
-    string = "A " + str(article_index) + " "
-    for word in word_list:
-        string += "," + str(matrix_row[word])
-    dmat_file.write(string + "\n")
-    article_index += 1
-dmat_file.close()
-        
+write_data_matrix(data_matrix, word_list)
 dm_write_time += timeit.default_timer()
 print "Data matrix written in " + str(round(dm_write_time,2)) + " seconds"
 
-
-# Write transaction matrix to a file
+# Write transaction matrix to transaction_matrix.csv
 trm_write_time = -timeit.default_timer()
-print "Writing transaction matrix in file transaction_matrix.csv"
-tmat_file = open("transaction_matrix.csv", "w")
-article_index = 1
-for matrix_row in data_matrix:
-    string = "\"Article " + str(article_index) + "\""
-    for word in word_list:
-        if matrix_row[word] > 0:
-            string += ", " + word
-    tmat_file.write(string + "\n")
-    article_index += 1
-tmat_file.close()
-
+write_transaction_matrix(data_matrix, word_list)
 trm_write_time += timeit.default_timer()
 print "Transaction matrix written in " + str(round(trm_write_time,2)) + " seconds"
 
 end = timeit.default_timer()
 print "Total Execution Time :" + str(round(end- start,2))
 
-sys.exit()
+
