@@ -67,17 +67,15 @@ stopwords = file.read().split()
 file.close()
 
 # Iterate through each file, parse and iterate through article
-size = 0
+parse_time = -timeit.default_timer()
 for dir_entry in os.listdir(PATH):   #each file
     dir_entry_path = os.path.join(PATH, dir_entry)
     file = open(dir_entry_path)
+    print "Reading file: " + dir_entry_path
     content = re.sub('&(.+?);|,|\'|"', '',file.read())  #remove &xxx; and comma and quotes, which may interfere with parsing
     parser = TitleParser()  # Used for parsing the files
     parser.feed(content)
     file.close()
-
-    size += len(parser.records_list)
-    print "Record list size = " + str(len(parser.records_list))
 
     for record in parser.records_list: #each article
 	topics_list = record.get("topics", [])
@@ -88,12 +86,9 @@ for dir_entry in os.listdir(PATH):   #each file
         for word in freq_dict.keys():
             word_article_freq[word] += 1
 
-    print "Reading file: " + dir_entry_path
+parse_time += timeit.default_timer()
+print "Parsed all articles in "+ str(round(parse_time,2)) + " seconds"
 
-parse_time = timeit.default_timer()
-print "Parsed all articles in "+ str(parse_time - start) + " seconds"
-
-print "Record list total size = " + str(size)
 
 # Sort the word_article_freq dictionary by the value
 word_article_freq_sorted = sorted(word_article_freq.iteritems(), key=operator.itemgetter(1))
@@ -140,9 +135,9 @@ print "Word list created... Number of words: " + str(len(word_list))
 
 # Create data matrix
 print "Creating data matrix..."
+dm_create_time = -timeit.default_timer()
 count = 0
 data_matrix = []
-print "Record freq list size = " + str(len(record_freq_list))
 for record in record_freq_list:
     matrix_row = defaultdict(int)
     freq_dict = record.get("freq_dict", {})
@@ -157,14 +152,16 @@ for record in record_freq_list:
 	    matrix_row[word] += PLACE_WEIGHT
     data_matrix.append(matrix_row)
     count += 1
-    if count % 500 == 0:
+    if count % 5000 == 0:
         print str(count) + " rows created"
+print "Total " + str(count) + " rows created"
 
-dm_create_time = timeit.default_timer()
-print "Data matrix created in " + str(dm_create_time -start) + " seconds"
+dm_create_time += timeit.default_timer()
+print "Data matrix created in " + str(round(dm_create_time,2)) + " seconds"
 
 
 # Write data matrix in a file
+dm_write_time = -timeit.default_timer()
 print "Writing data matrix in file data_matrix.csv"
 dmat_file = open("data_matrix.csv", "w")
 for word in word_list:
@@ -180,15 +177,16 @@ for matrix_row in data_matrix:
     article_index += 1
 dmat_file.close()
         
-dm_write_time = timeit.default_timer()
-print "Data matrix written in " + str(dm_write_time -start) + " seconds"
+dm_write_time += timeit.default_timer()
+print "Data matrix written in " + str(round(dm_write_time,2)) + " seconds"
 
 
 # Write transaction matrix to a file
+trm_write_time = -timeit.default_timer()
 print "Writing transaction matrix in file transaction_matrix.csv"
 tmat_file = open("transaction_matrix.csv", "w")
 article_index = 1
-for matrix_row in data_matrix[:1000]:
+for matrix_row in data_matrix:
     string = "\"Article " + str(article_index) + "\""
     for word in word_list:
         if matrix_row[word] > 0:
@@ -197,10 +195,10 @@ for matrix_row in data_matrix[:1000]:
     article_index += 1
 tmat_file.close()
 
-dm_write_time = timeit.default_timer()
-print "Transaction matrix written in " + str(dm_write_time -start) + " seconds"
+trm_write_time += timeit.default_timer()
+print "Transaction matrix written in " + str(round(trm_write_time,2)) + " seconds"
 
 end = timeit.default_timer()
-print "Total Execution Time :" + str(end- start)
+print "Total Execution Time :" + str(round(end- start,2))
 
 sys.exit()
