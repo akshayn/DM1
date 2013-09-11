@@ -60,7 +60,6 @@ def find_index(sorted_tuple_list, value):
 # 2. freq_dict - This is again a dictionary consisting of word-count pairs
 record_freq_list = []  # Store the word count for each article in this list
 word_article_freq = defaultdict(int)   # Store the number of articles in which a word appears
-parser = TitleParser()  # Used for parsing the files
 
 #load stopwords
 file = open('stopwords')
@@ -68,12 +67,17 @@ stopwords = file.read().split()
 file.close()
 
 # Iterate through each file, parse and iterate through article
+size = 0
 for dir_entry in os.listdir(PATH):   #each file
     dir_entry_path = os.path.join(PATH, dir_entry)
     file = open(dir_entry_path)
     content = re.sub('&(.+?);|,|\'|"', '',file.read())  #remove &xxx; and comma and quotes, which may interfere with parsing
+    parser = TitleParser()  # Used for parsing the files
     parser.feed(content)
     file.close()
+
+    size += len(parser.records_list)
+    print "Record list size = " + str(len(parser.records_list))
 
     for record in parser.records_list: #each article
 	topics_list = record.get("topics", [])
@@ -89,6 +93,7 @@ for dir_entry in os.listdir(PATH):   #each file
 parse_time = timeit.default_timer()
 print "Parsed all articles in "+ str(parse_time - start) + " seconds"
 
+print "Record list total size = " + str(size)
 
 # Sort the word_article_freq dictionary by the value
 word_article_freq_sorted = sorted(word_article_freq.iteritems(), key=operator.itemgetter(1))
@@ -135,7 +140,9 @@ print "Word list created... Number of words: " + str(len(word_list))
 
 # Create data matrix
 print "Creating data matrix..."
+count = 0
 data_matrix = []
+print "Record freq list size = " + str(len(record_freq_list))
 for record in record_freq_list:
     matrix_row = defaultdict(int)
     freq_dict = record.get("freq_dict", {})
@@ -149,6 +156,9 @@ for record in record_freq_list:
 	if word in places:
 	    matrix_row[word] += PLACE_WEIGHT
     data_matrix.append(matrix_row)
+    count += 1
+    if count % 500 == 0:
+        print str(count) + " rows created"
 
 dm_create_time = timeit.default_timer()
 print "Data matrix created in " + str(dm_create_time -start) + " seconds"
