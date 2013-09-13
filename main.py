@@ -78,20 +78,19 @@ def remove_stopwords(trimmed_list):
             word_list.append(i[0])
     return word_list
 
-# Add topics and places to word_list
-def add_topics_places_to_word_list(word_list, record_freq_list):
+# Create all topics list
+def create_topics_list(record_freq_list):
+    topics_list = []
     for record in record_freq_list:
-        topics_list = record.get("topics", [])
-        for topic in topics_list:
-            if topic not in word_list:
-                word_list.append(topic)
+        topics_list += record.get("topics", [])
+    return topics_list
 
+# Create all places list
+def create_places_list(record_freq_list):
+    places_list = []
     for record in record_freq_list:
-        places_list = record.get("places", [])
-        for place in places_list:
-            if place not in word_list:
-                word_list.append(place)
-    return word_list
+        places_list += record.get("places", [])
+    return places_list
 
 # Write the word list to word_list.txt
 def write_word_list(word_list):
@@ -102,7 +101,7 @@ def write_word_list(word_list):
     word_file.close()
 
 # Create data matrix
-def create_data_matrix(record_freq_list):
+def create_data_matrix(record_freq_list, word_list, topics_list, places_list):
     count = 0
     data_matrix = {}
     for record in record_freq_list:
@@ -112,11 +111,12 @@ def create_data_matrix(record_freq_list):
         topics = record.get("topics", [])
         places = record.get("places", [])
         for word in word_list:
-            if word in freq_dict:
-	        matrix_row[word] += freq_dict[word]
-            if word in topics:
+	    matrix_row[word] += freq_dict[word]
+        for word in topics_list:
+	    if word in topics:
 	        matrix_row[word] += TOPIC_WEIGHT
-            if word in places:
+        for word in places_list:
+	    if word in places:
 	        matrix_row[word] += PLACE_WEIGHT
         data_matrix[article_id] = matrix_row
         count += 1
@@ -125,22 +125,42 @@ def create_data_matrix(record_freq_list):
     print "Total " + str(count) + " rows created"
     return data_matrix
 
+
 # Write data matrix to data_matrix.csv
-def write_data_matrix(data_matrix, word_list):
+def write_data_matrix(data_matrix, word_list, topics_list, places_list):
     print "Writing data matrix in file data_matrix.csv"
     dmat_file = open("data_matrix.csv", "w")
-    for word in word_list:
-        dmat_file.write("," + word)
+
+    # on the first line, write word# / topic# / place#
+    for index in range(1, 1+len(word_list)):
+        dmat_file.write(", Word " + str(index))
+    for index in range(1, 1+len(topics_list)):
+        dmat_file.write(", Topic " + str(index))
+    for index in range(1, 1+len(places_list)):
+        dmat_file.write(", Place " + str(index))
     dmat_file.write("\n")
 
-    article_index = 1
+    # On the second line, write actual words/topics/place names
+    for word in word_list:
+        dmat_file.write("," + word)
+    for topic in topics_list:
+        dmat_file.write("," + topic)
+    for place in places_list:
+        dmat_file.write("," + place)
+    dmat_file.write("\n")
+
+    # Each line is for an article
     for article_id, matrix_row in data_matrix.iteritems():
         string = "Article " + str(article_id)
         for word in word_list:
             string += "," + str(matrix_row[word])
+        for topic in topics_list:
+            string += "," + str(matrix_row[word])
+        for word in word_list:
+            string += "," + str(matrix_row[word])
         dmat_file.write(string + "\n")
-        article_index += 1
     dmat_file.close()
+
 
 # Write transaction matrix to transaction_matrix.csv
 def write_transaction_matrix(data_matrix, word_list):
@@ -213,8 +233,9 @@ trimmed_list = get_trimmed_list(word_article_freq_sorted)
 # Remove stopwords
 word_list = remove_stopwords(trimmed_list)
 
-# Add topics and places to word_list
-word_list = add_topics_places_to_word_list(word_list, record_freq_list)
+# Create topics and places lists
+topics_list = create_topics_list(record_freq_list)
+places_list = create_places_list(record_freq_list)
 
 print "Word list created... Number of words: " + str(len(word_list))
 
@@ -224,7 +245,7 @@ write_word_list(word_list)
 # Create data matrix
 print "Creating data matrix..."
 dm_create_time = -timeit.default_timer()
-data_matrix = create_data_matrix(record_freq_list)
+data_matrix = create_data_matrix(record_freq_list, word_list, topics_list, places_list)
 dm_create_time += timeit.default_timer()
 print "Data matrix created in " + str(round(dm_create_time,2)) + " seconds"
 
