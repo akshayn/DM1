@@ -185,9 +185,9 @@ def write_transaction_matrix(article_data_list, word_list):
         for word in word_list:
             if article_data["freq_dict"][word] > 0:
                 bag.append(word)
-        string += ", \"" + ", ".join(bag) + "\""
-        string += ", \"" + ", ".join(article_data["topics"]) + "\""
-        string += ", \"" + ", ".join(article_data["places"]) + "\""
+        string += ",\"" + ", ".join(bag) + "\""
+        string += ",\"" + ", ".join(article_data["topics"]) + "\""
+        string += ",\"" + ", ".join(article_data["places"]) + "\""
         tmat_file.write(string + "\n")
     tmat_file.close()
 
