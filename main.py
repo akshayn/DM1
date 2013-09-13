@@ -1,5 +1,16 @@
 #!/usr/bin/python
 
+
+#  Algorithm:
+#  1. Maintain a document frequency hash
+#  2. Iterate through file and feed it to ArticleParser  
+#  3. ArticleParser returns list of article data(id, topics, places, title, text) in that file
+#  4. For each article, build word-count for title and text; also update document frequency
+#  5. Sort the document frequency by the value(frequency) and trim 1% on value
+#  6. Load list of stopwords from file and remove stopwords from trimmed words
+#  7. Create topics and places lists from all articles
+#  8. Write data matrix and transaction matrix to files
+
 import os
 import re
 import math
@@ -18,6 +29,11 @@ TITLE_WEIGHT = 5
 TOPIC_WEIGHT = 1
 PLACES_WEIGHT = 1
 THRESHOLD_PERCENTAGE = 1
+
+
+#############
+# Functions #
+#############
 
 # Strip/replace specific characters
 def stripchars(string):
@@ -41,6 +57,7 @@ def get_frequency(record):
 
     return freq_dict
 
+
 # sorted_tuple_list is a list of tuples
 # Find the index of tuple from which to trim
 def find_index(sorted_tuple_list, value):
@@ -49,48 +66,37 @@ def find_index(sorted_tuple_list, value):
             return i
     return -1        
 
+
 # Compute and write Document Frequency and Inverse Document Frequency to file
-def write_IDF(word_article_freq_sorted):
+def write_IDF(document_freq_dict_sorted):
     print "Writing inverse document frequency to IDF.txt"
-    total_docs= float(len(word_article_freq_sorted))
+    total_docs= float(len(document_freq_dict_sorted))
     idf_file = open("IDF.txt","w")
-    for i in word_article_freq_sorted:
+    for i in document_freq_dict_sorted:
         idf_file.write(i[0] + " " + str(i[1]) + " " + str(math.log(total_docs/i[1])) + "\n")
     idf_file.close()
 
+
 # Find the thresholds on IDF and trim it
-def get_trimmed_list(word_article_freq_sorted):
-    max_freq = word_article_freq_sorted[-1][1]
+def get_trimmed_list(document_freq_dict_sorted):
+    max_freq = document_freq_dict_sorted[-1][1]
     lower_threshold = max_freq/100*THRESHOLD_PERCENTAGE
     upper_threshold = max_freq/100*(100 - THRESHOLD_PERCENTAGE)
 
-    lower_index = find_index(word_article_freq_sorted, lower_threshold)
-    upper_index = find_index(word_article_freq_sorted, upper_threshold)
-    trimmed_list = word_article_freq_sorted[lower_index:upper_index]
+    lower_index = find_index(document_freq_dict_sorted, lower_threshold)
+    upper_index = find_index(document_freq_dict_sorted, upper_threshold)
+    trimmed_list = document_freq_dict_sorted[lower_index:upper_index]
     return trimmed_list
+
 
 # Remove stopwords
 def remove_stopwords(trimmed_list):
-    print "Creating word list..."
     word_list = []
     for i in trimmed_list:
         if not i[0] in stopwords:
             word_list.append(i[0])
     return word_list
 
-# Create all topics list
-def create_topics_list(record_freq_list):
-    topics_list = []
-    for record in record_freq_list:
-        topics_list += record.get("topics", [])
-    return topics_list
-
-# Create all places list
-def create_places_list(record_freq_list):
-    places_list = []
-    for record in record_freq_list:
-        places_list += record.get("places", [])
-    return places_list
 
 # Write the word list to word_list.txt
 def write_word_list(word_list):
@@ -100,35 +106,25 @@ def write_word_list(word_list):
         word_file.write(word + '\n')
     word_file.close()
 
-# Create data matrix
-def create_data_matrix(record_freq_list, word_list, topics_list, places_list):
-    count = 0
-    data_matrix = {}
-    for record in record_freq_list:
-        matrix_row = defaultdict(int)
-        article_id = record["article_id"]
-        freq_dict = record.get("freq_dict", {})
-        topics = record.get("topics", [])
-        places = record.get("places", [])
-        for word in word_list:
-	    matrix_row[word] += freq_dict[word]
-        for word in topics_list:
-	    if word in topics:
-	        matrix_row[word] += TOPIC_WEIGHT
-        for word in places_list:
-	    if word in places:
-	        matrix_row[word] += PLACE_WEIGHT
-        data_matrix[article_id] = matrix_row
-        count += 1
-        if count % 5000 == 0:
-            print str(count) + " rows created"
-    print "Total " + str(count) + " rows created"
-    return data_matrix
+
+# Create all topics list
+def create_topics_list(article_data_list):
+    topics_set = set()
+    for record in article_data_list:
+        topics_set.update(record.get("topics", []))
+    return list(topics_set)
+
+
+# Create all places list
+def create_places_list(article_data_list):
+    places_set = set()
+    for record in article_data_list:
+        places_set.update(record.get("places", []))
+    return list(places_list)
 
 
 # Write data matrix to data_matrix.csv
-def write_data_matrix(data_matrix, word_list, topics_list, places_list):
-    print "Writing data matrix in file data_matrix.csv"
+def write_data_matrix(article_data_list, word_list, topics_list, places_list):
     dmat_file = open("data_matrix.csv", "w")
 
     # on the first line, write word# / topic# / place#
@@ -150,30 +146,37 @@ def write_data_matrix(data_matrix, word_list, topics_list, places_list):
     dmat_file.write("\n")
 
     # Each line is for an article
-    for article_id, matrix_row in data_matrix.iteritems():
-        string = "Article " + str(article_id)
+    for article_data in article_data_list:
+        string = "Article " + str(article_data["article_id"])
         for word in word_list:
-            string += "," + str(matrix_row[word])
+            string += "," + str(article_data["freq_dict"][word])
         for topic in topics_list:
-            string += "," + str(matrix_row[word])
-        for word in word_list:
-            string += "," + str(matrix_row[word])
+            if topic in article_data["topics"]:
+                string += "," + str(TOPIC_WEIGHT)
+            else:
+                string += ",0"
+        for topic in places_list:
+            if topic in article_data["places"]:
+                string += "," + str(PLACE_WEIGHT)
+            else:
+                string += ",0"
         dmat_file.write(string + "\n")
     dmat_file.close()
 
 
 # Write transaction matrix to transaction_matrix.csv
-def write_transaction_matrix(data_matrix, word_list):
-    print "Writing transaction matrix in file transaction_matrix.csv"
+def write_transaction_matrix(article_data_list, word_list):
     tmat_file = open("transaction_matrix.csv", "w")
-    article_index = 1
-    for article_id, matrix_row in data_matrix.iteritems():
-        string = "Article " + str(article_id)
+    for article_data in article_data_list:
+        string = "Article " + str(article_data["article_id"])
+        bag = []
         for word in word_list:
-            if matrix_row[word] > 0:
-                string += ", " + word
+            if article_data["freq_dict"][word] > 0:
+                bag.append(word)
+        string += ", \"" + ", ".join(bag) + "\""
+        string += ", \"" + ", ".join(article_data["topics"]) + "\""
+        string += ", \"" + ", ".join(article_data["places"]) + "\""
         tmat_file.write(string + "\n")
-        article_index += 1
     tmat_file.close()
 
 
@@ -183,18 +186,14 @@ def write_transaction_matrix(data_matrix, word_list):
 # Main #
 ########
 
-# record_freq_list is a list, with each element a dictionary.
+# article_data_list is a list, with each element a dictionary.
 # The dictionary(for an aricle) consists of:
-# 1. topics - This is a list of topics
-# 2. places - This is a list of places
-# 2. freq_dict - This is again a dictionary consisting of word-count pairs
-record_freq_list = []  # Store the word count for each article in this list
-word_article_freq = defaultdict(int)   # Store the number of articles in which a word appears
-
-#load stopwords
-file = open('stopwords')
-stopwords = file.read().split()
-file.close()
+# 1. article_id - The NEWID of reuters article
+# 2. topics - This is a list of topics
+# 3. places - This is a list of places
+# 4. freq_dict - This is again a dictionary consisting of word-count pairs
+article_data_list = []  # Store the word count for each article in this list
+document_freq_dict = defaultdict(int)   # Store the number of articles in which a word appears
 
 # Iterate through each file, parse and iterate through article
 parse_time = -timeit.default_timer()
@@ -212,52 +211,52 @@ for dir_entry in sorted(os.listdir(PATH)):   #each file
 	topics_list = record.get("topics", [])
         places_list = record.get("places", [])
         freq_dict = get_frequency(record)
-        record_freq_list.append( {'article_id':article_id, 'topics':topics_list, 'places':places_list,'freq_dict':freq_dict} )
+        article_data_list.append( {'article_id':article_id, 'topics':topics_list, 'places':places_list,'freq_dict':freq_dict} )
 
         for word in freq_dict.keys():
-            word_article_freq[word] += 1
+            document_freq_dict[word] += 1
+
 
 parse_time += timeit.default_timer()
-print "Parsed all articles in "+ str(round(parse_time,2)) + " seconds"
+print "Parsed all articles in "+ str(round(parse_time,2)) + " seconds\n"
 
 
-# Sort the word_article_freq dictionary by the value
-word_article_freq_sorted = sorted(word_article_freq.iteritems(), key=operator.itemgetter(1))
+# Sort the document_freq_dict dictionary by the value
+document_freq_dict_sorted = sorted(document_freq_dict.iteritems(), key=operator.itemgetter(1))
 
 # Compute and write Document Frequency and Inverse Document Frequency to file
-write_IDF(word_article_freq_sorted)
+write_IDF(document_freq_dict_sorted)
 
 # Find the thresholds on IDF and trim it
-trimmed_list = get_trimmed_list(word_article_freq_sorted)
+trimmed_list = get_trimmed_list(document_freq_dict_sorted)
+print "Trimmed word list... Number of words:  " + str(len(trimmed_list))
 
+# Load stopwords
+file = open('stopwords')
+stopwords = file.read().split()
+file.close()
 # Remove stopwords
 word_list = remove_stopwords(trimmed_list)
 
-# Create topics and places lists
-topics_list = create_topics_list(record_freq_list)
-places_list = create_places_list(record_freq_list)
-
-print "Word list created... Number of words: " + str(len(word_list))
-
 # Write the word list
 write_word_list(word_list)
+print "Removed stopwords... Number of words: " + str(len(word_list))
 
-# Create data matrix
-print "Creating data matrix..."
-dm_create_time = -timeit.default_timer()
-data_matrix = create_data_matrix(record_freq_list, word_list, topics_list, places_list)
-dm_create_time += timeit.default_timer()
-print "Data matrix created in " + str(round(dm_create_time,2)) + " seconds"
+# Create topics and places lists
+topics_list = create_topics_list(article_data_list)
+places_list = create_places_list(article_data_list)
 
 # Write data matrix to data_matrix.csv
+print "Writing data matrix in file data_matrix.csv"
 dm_write_time = -timeit.default_timer()
-write_data_matrix(data_matrix, word_list)
+write_data_matrix(article_data_list, word_list, topics_list, places_list)
 dm_write_time += timeit.default_timer()
 print "Data matrix written in " + str(round(dm_write_time,2)) + " seconds"
 
 # Write transaction matrix to transaction_matrix.csv
+print "Writing transaction matrix in file transaction_matrix.csv"
 trm_write_time = -timeit.default_timer()
-write_transaction_matrix(data_matrix, word_list)
+write_transaction_matrix(article_data_list, word_list)
 trm_write_time += timeit.default_timer()
 print "Transaction matrix written in " + str(round(trm_write_time,2)) + " seconds"
 
