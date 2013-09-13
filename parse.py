@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 from HTMLParser import HTMLParser
 
 # class for parsing input file.
@@ -15,7 +13,7 @@ from HTMLParser import HTMLParser
 #          Each place is a string
 #    4. text
 
-class TitleParser(HTMLParser):
+class ArticleParser(HTMLParser):
 
     # Set all flags to False and initialize records_list
     def reset(self):
@@ -38,6 +36,10 @@ class TitleParser(HTMLParser):
         # Initialize a dictionary for this article's record 
         if tag.upper() == "REUTERS":
 	    self.record = {}
+            for attr in attrs:
+                if attr[0].upper() == "NEWID":
+                    self.record["article_id"] = int(attr[1])
+                    break
 
         # A topic is found
 	elif tag.upper() == "D":
@@ -68,7 +70,8 @@ class TitleParser(HTMLParser):
         # Append current record to the records_list when 
 	# the article ends
         if tag.upper() == "REUTERS":
-            self.records_list.append(self.record)
+            if self.record.get("title", -1) != -1:
+                self.records_list.append(self.record)
 
         elif tag.upper() == "D":
 	    if self.topics_flag:
@@ -106,5 +109,6 @@ class TitleParser(HTMLParser):
 
         elif self.body_flag:
 	    self.record["text"] = data.lower()
+
 
 

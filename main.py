@@ -4,7 +4,7 @@ import os
 import re
 import math
 import operator
-from parse import TitleParser
+from parse import ArticleParser
 from collections import defaultdict
 import timeit
 
@@ -104,9 +104,10 @@ def write_word_list(word_list):
 # Create data matrix
 def create_data_matrix(record_freq_list):
     count = 0
-    data_matrix = []
+    data_matrix = {}
     for record in record_freq_list:
         matrix_row = defaultdict(int)
+        article_id = record["article_id"]
         freq_dict = record.get("freq_dict", {})
         topics = record.get("topics", [])
         places = record.get("places", [])
@@ -117,7 +118,7 @@ def create_data_matrix(record_freq_list):
 	        matrix_row[word] += TOPIC_WEIGHT
             if word in places:
 	        matrix_row[word] += PLACE_WEIGHT
-        data_matrix.append(matrix_row)
+        data_matrix[article_id] = matrix_row
         count += 1
         if count % 5000 == 0:
             print str(count) + " rows created"
@@ -133,8 +134,8 @@ def write_data_matrix(data_matrix, word_list):
     dmat_file.write("\n")
 
     article_index = 1
-    for matrix_row in data_matrix:
-        string = "Article " + str(article_index)
+    for article_id, matrix_row in data_matrix.iteritems():
+        string = "Article " + str(article_id)
         for word in word_list:
             string += "," + str(matrix_row[word])
         dmat_file.write(string + "\n")
@@ -146,8 +147,8 @@ def write_transaction_matrix(data_matrix, word_list):
     print "Writing transaction matrix in file transaction_matrix.csv"
     tmat_file = open("transaction_matrix.csv", "w")
     article_index = 1
-    for matrix_row in data_matrix:
-        string = "Article " + str(article_index)
+    for article_id, matrix_row in data_matrix.iteritems():
+        string = "Article " + str(article_id)
         for word in word_list:
             if matrix_row[word] > 0:
                 string += ", " + word
@@ -177,20 +178,21 @@ file.close()
 
 # Iterate through each file, parse and iterate through article
 parse_time = -timeit.default_timer()
-for dir_entry in os.listdir(PATH):   #each file
+for dir_entry in sorted(os.listdir(PATH)):   #each file
     dir_entry_path = os.path.join(PATH, dir_entry)
     file = open(dir_entry_path)
     print "Reading file: " + dir_entry_path
     content = re.sub('&(.+?);|,|\'|"', '',file.read())  #remove &xxx; and comma and quotes, which may interfere with parsing
-    parser = TitleParser()  # Used for parsing the files
+    parser = ArticleParser()  # Used for parsing the files
     parser.feed(content)
     file.close()
 
     for record in parser.records_list: #each article
+        article_id = record.get("article_id", -1)
 	topics_list = record.get("topics", [])
         places_list = record.get("places", [])
         freq_dict = get_frequency(record)
-        record_freq_list.append( {'topics':topics_list, 'places':places_list,'freq_dict':freq_dict} )
+        record_freq_list.append( {'article_id':article_id, 'topics':topics_list, 'places':places_list,'freq_dict':freq_dict} )
 
         for word in freq_dict.keys():
             word_article_freq[word] += 1
