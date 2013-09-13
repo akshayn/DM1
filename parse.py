@@ -70,7 +70,7 @@ class ArticleParser(HTMLParser):
         # Append current record to the records_list when 
 	# the article ends
         if tag.upper() == "REUTERS":
-            if self.record.get("text", -1) != -1: #or self.record.get("text", -1) != -1:
+            if self.record.get("title", -1) != -1 or self.record.get("text", -1) != -1:
                 self.records_list.append(self.record)
 
         elif tag.upper() == "D":
