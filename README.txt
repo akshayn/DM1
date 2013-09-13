@@ -18,6 +18,7 @@ Viewing Output
 --------------
 The feature vectors are in csv files and are best viewed in CSV readers like LibreOffice Calc/Microsoft Excel.
 You may need to enable "Quoted field as text" to allow quoted list of words to appear in single column in transaction matrix.
+Note that the words are in stemmed form.
 
 The output generated consists of following files:
 1) Inverse Document Frequency (IDF.csv)
