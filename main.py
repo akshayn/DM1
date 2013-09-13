@@ -2,24 +2,24 @@
 
 
 #  Algorithm:
-#  1. Maintain a document frequency hash
-#  2. Iterate through file and feed it to ArticleParser  
-#  3. ArticleParser returns list of article data(id, topics, places, title, text) in that file
-#  4. For each article, build word-count for title and text; also update document frequency
-#  5. Sort the document frequency by the value(frequency) and trim 0.75% on value
-#  6. Load list of stopwords from file and remove stopwords from trimmed words
-#  7. Create topics and places lists from all articles
-#  8. Write data matrix and transaction matrix to files
+#  1. Maintain a document frequency hash.
+#  2. Iterate through file, strip invalid characters and feed it to ArticleParser.
+#  3. ArticleParser returns list of article data(id, topics, places, title, text) in that file.
+#  4. For each article, apply stemming on each word.
+#     Build word-count for title and text; also update document frequency.
+#  5. Sort the document frequency by the value(frequency) and trim 0.75% on value.
+#  6. Load list of stopwords from file and remove stopwords from trimmed words.
+#  7. Create topics and places lists from all articles.
+#  8. Write data matrix and transaction matrix to files.
 
 import os
 import re
 import math
 import nltk
+import timeit
 import operator
 from parse import ArticleParser
 from collections import defaultdict
-#from nltk.stem.wordnet import WordNetLemmatizer
-import timeit
 
 start = timeit.default_timer()
 
@@ -33,7 +33,9 @@ PLACE_WEIGHT = 1
 THRESHOLD_PERCENTAGE = 0.75
 
 stemmer = nltk.stem.porter.PorterStemmer()
-#lem = WordNetLemmatizer()
+#lem = nltk.stem.wordnet.WordNetLemmatizer()
+
+
 
 #############
 # Functions #
@@ -86,7 +88,7 @@ def write_IDF(document_freq_dict_sorted):
     idf_file.close()
 
 
-# Find the thresholds on IDF and trim it
+# Find the thresholds on sorted Document Frequency and trim based on it
 def get_trimmed_list(document_freq_dict_sorted):
     max_freq = document_freq_dict_sorted[-1][1]
     lower_threshold = max_freq/100*THRESHOLD_PERCENTAGE
@@ -176,6 +178,7 @@ def write_data_matrix(article_data_list, word_list, topics_list, places_list):
 # Write transaction matrix to transaction_matrix.csv
 def write_transaction_matrix(article_data_list, word_list):
     tmat_file = open("transaction_matrix.csv", "w")
+    tmat_file.write("Article Id, Bag of words, Bag of Topics, Bag of Places\n")
     for article_data in article_data_list:
         string = "Article " + str(article_data["article_id"])
         bag = []
@@ -196,12 +199,13 @@ def write_transaction_matrix(article_data_list, word_list):
 ########
 
 # article_data_list is a list, with each element a dictionary.
+# Store the word count for each article in this list.
 # The dictionary(for an aricle) consists of:
 # 1. article_id - The NEWID of reuters article
 # 2. topics - This is a list of topics
 # 3. places - This is a list of places
 # 4. freq_dict - This is again a dictionary consisting of word-count pairs
-article_data_list = []  # Store the word count for each article in this list
+article_data_list = []  
 document_freq_dict = defaultdict(int)   # Store the number of articles in which a word appears
 
 # Iterate through each file, parse and iterate through article
@@ -233,7 +237,7 @@ print "Parsed all articles in "+ str(round(parse_time,2)) + " seconds\n"
 # Sort the document_freq_dict dictionary by the value
 document_freq_dict_sorted = sorted(document_freq_dict.iteritems(), key=operator.itemgetter(1))
 
-# Compute and write Document Frequency and Inverse Document Frequency to file
+# Compute and write Document Frequency and Inverse Document Frequency to IDF.csv
 write_IDF(document_freq_dict_sorted)
 
 # Find the thresholds on IDF and trim it
@@ -247,7 +251,7 @@ file.close()
 # Remove stopwords
 word_list = remove_stopwords(trimmed_list)
 
-# Write the word list
+# Write the word list to word_list.txt
 print "Removed stopwords... Number of words: " + str(len(word_list))
 write_word_list(word_list)
 

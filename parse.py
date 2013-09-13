@@ -67,8 +67,8 @@ class ArticleParser(HTMLParser):
 
     def handle_endtag(self, tag):
 
-        # Append current record to the records_list when 
-	# the article ends
+        # Append current record to the records_list when the article ends
+        # Ignore article if both text and title not found.
         if tag.upper() == "REUTERS":
             if self.record.get("title", -1) != -1 or self.record.get("text", -1) != -1:
                 self.records_list.append(self.record)
