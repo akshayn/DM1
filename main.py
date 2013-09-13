@@ -6,7 +6,7 @@
 #  2. Iterate through file and feed it to ArticleParser  
 #  3. ArticleParser returns list of article data(id, topics, places, title, text) in that file
 #  4. For each article, build word-count for title and text; also update document frequency
-#  5. Sort the document frequency by the value(frequency) and trim 1% on value
+#  5. Sort the document frequency by the value(frequency) and trim 0.75% on value
 #  6. Load list of stopwords from file and remove stopwords from trimmed words
 #  7. Create topics and places lists from all articles
 #  8. Write data matrix and transaction matrix to files
@@ -14,9 +14,11 @@
 import os
 import re
 import math
+import nltk
 import operator
 from parse import ArticleParser
 from collections import defaultdict
+#from nltk.stem.wordnet import WordNetLemmatizer
 import timeit
 
 start = timeit.default_timer()
@@ -28,8 +30,10 @@ NORMAL_WEIGHT = 1
 TITLE_WEIGHT = 5
 TOPIC_WEIGHT = 1
 PLACES_WEIGHT = 1
-THRESHOLD_PERCENTAGE = 1
+THRESHOLD_PERCENTAGE = 0.75
 
+stemmer = nltk.stem.porter.PorterStemmer()
+#lem = WordNetLemmatizer()
 
 #############
 # Functions #
@@ -48,11 +52,15 @@ def get_frequency(record):
     title = record.get("title", "default")
     title = stripchars(title)
     for word in re.findall(WORD_REGEX, title):
+        #word = lem.lemmatize(word)
+	word = stemmer.stem(word)
         freq_dict[word] += TITLE_WEIGHT
 
     text = record.get("text", "default")
     text = stripchars(text)
     for word in re.findall(WORD_REGEX, text):
+        #word = lem.lemmatize(word)
+	word = stemmer.stem(word)
         freq_dict[word] += NORMAL_WEIGHT
 
     return freq_dict
@@ -69,11 +77,12 @@ def find_index(sorted_tuple_list, value):
 
 # Compute and write Document Frequency and Inverse Document Frequency to file
 def write_IDF(document_freq_dict_sorted):
-    print "Writing inverse document frequency to IDF.txt"
+    print "Writing inverse document frequency to IDF.csv"
     total_docs= float(len(document_freq_dict_sorted))
-    idf_file = open("IDF.txt","w")
+    idf_file = open("IDF.csv","w")
+    idf_file.write("Word, Document Frequency, Inverse Document Frequency\n")
     for i in document_freq_dict_sorted:
-        idf_file.write(i[0] + " " + str(i[1]) + " " + str(math.log(total_docs/i[1])) + "\n")
+        idf_file.write(i[0] + "," + str(i[1]) + "," + str(math.log(total_docs/i[1])) + "\n")
     idf_file.close()
 
 
@@ -239,8 +248,8 @@ file.close()
 word_list = remove_stopwords(trimmed_list)
 
 # Write the word list
-write_word_list(word_list)
 print "Removed stopwords... Number of words: " + str(len(word_list))
+write_word_list(word_list)
 
 # Create topics and places lists
 topics_list = create_topics_list(article_data_list)
