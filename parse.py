@@ -99,9 +99,9 @@ class ArticleParser(HTMLParser):
 
         # Append this topic to the current topics list
         if self.topic_d_flag:
-	    if self.topics_flag:
 	        self.topics_list.append(data)
-	    elif self.places_flag:
+	    
+        elif self.place_d_flag:
 	        self.places_list.append(data)
 
 	elif self.title_flag:

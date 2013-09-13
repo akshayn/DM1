@@ -29,7 +29,7 @@ WORD_REGEX = '[a-z]+'
 NORMAL_WEIGHT = 1
 TITLE_WEIGHT = 5
 TOPIC_WEIGHT = 1
-PLACES_WEIGHT = 1
+PLACE_WEIGHT = 1
 THRESHOLD_PERCENTAGE = 0.75
 
 stemmer = nltk.stem.porter.PorterStemmer()
@@ -129,7 +129,7 @@ def create_places_list(article_data_list):
     places_set = set()
     for record in article_data_list:
         places_set.update(record.get("places", []))
-    return list(places_list)
+    return list(places_set)
 
 
 # Write data matrix to data_matrix.csv
@@ -254,6 +254,8 @@ write_word_list(word_list)
 # Create topics and places lists
 topics_list = create_topics_list(article_data_list)
 places_list = create_places_list(article_data_list)
+print "Total number of topics: " + str(len(topics_list))
+print "Total number of places: " + str(len(places_list))
 
 # Write data matrix to data_matrix.csv
 print "Writing data matrix in file data_matrix.csv"

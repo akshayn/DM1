@@ -5,6 +5,8 @@ Akshay Nikam (nikam.5@osu.edu)
 ==========================
 Data Mining - Assignment 1
 ==========================
+*** NOTE: The program makes use of NLTK for stemming. ***
+
 
 Executing the program
 ---------------------
@@ -18,8 +20,8 @@ The feature vectors are in csv files and are best viewed in CSV readers like Lib
 
 
 The output generated consists of following files:
-1) Inverse Document Frequency (IDF.txt)
-   This provides a list of words over all the articles and document frequency and inverse document frequency.
+1) Inverse Document Frequency (IDF.csv)
+   This provides a list of words over all the articles and document frequency and inverse document frequency for each word.
 
 2) Word List (word_list.txt)
    The list of words after trimming and removing stopwords and used for constructing feature vectors.
