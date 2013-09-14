@@ -5,8 +5,9 @@ Akshay Nikam (nikam.5@osu.edu)
 ==========================
 Data Mining - Assignment 1
 ==========================
-*** NOTE: The program makes use of NLTK for stemming. ***
 
+*** NOTE: The program makes use of NLTK for stemming, hence cannot run on STDLINUX ***
+*** The program reads datasets from '/home/0/srini/WWW/674/public/reuters' ***
 
 Executing the program
 ---------------------

@@ -3,4 +3,4 @@ run:
 	./main.py
 
 clean:
-	rm *.pyc IDF.txt *.csv word_list.txt
+	rm *.pyc *.csv word_list.txt

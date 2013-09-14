@@ -24,7 +24,7 @@ from collections import defaultdict
 start = timeit.default_timer()
 
 # Constants
-PATH = r'reuters'
+PATH = r'/home/0/srini/WWW/674/public/reuters'
 WORD_REGEX = '[a-z]+'
 NORMAL_WEIGHT = 1
 TITLE_WEIGHT = 5
