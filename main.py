@@ -24,7 +24,7 @@ from collections import defaultdict
 start = timeit.default_timer()
 
 # Constants
-PATH = r'/home/0/srini/WWW/674/public/reuters'
+PATH = r'reuters'
 WORD_REGEX = '[a-z]+'
 NORMAL_WEIGHT = 1
 TITLE_WEIGHT = 5
@@ -139,21 +139,22 @@ def write_data_matrix(article_data_list, word_list, topics_list, places_list):
     dmat_file = open("data_matrix.csv", "w")
 
     # on the first line, write word# / topic# / place#
-    for index in range(1, 1+len(word_list)):
-        dmat_file.write(", Word " + str(index))
-    for index in range(1, 1+len(topics_list)):
-        dmat_file.write(", Topic " + str(index))
-    for index in range(1, 1+len(places_list)):
-        dmat_file.write(", Place " + str(index))
-    dmat_file.write("\n")
+    #for index in range(1, 1+len(word_list)):
+    #    dmat_file.write(", Word " + str(index))
+    #for index in range(1, 1+len(topics_list)):
+    #    dmat_file.write(", Topic " + str(index))
+    #for index in range(1, 1+len(places_list)):
+    #    dmat_file.write(", Place " + str(index))
+    #dmat_file.write("\n")
 
     # On the second line, write actual words/topics/place names
+    dmat_file.write("Article #")
     for word in word_list:
         dmat_file.write("," + word)
     for topic in topics_list:
-        dmat_file.write("," + topic)
-    for place in places_list:
-        dmat_file.write("," + place)
+        dmat_file.write("," + "t_"+topic)
+    #for place in places_list:
+    #    dmat_file.write("," + "p_"+place)
     dmat_file.write("\n")
 
     # Each line is for an article
@@ -166,11 +167,11 @@ def write_data_matrix(article_data_list, word_list, topics_list, places_list):
                 string += "," + str(TOPIC_WEIGHT)
             else:
                 string += ",0"
-        for topic in places_list:
-            if topic in article_data["places"]:
-                string += "," + str(PLACE_WEIGHT)
-            else:
-                string += ",0"
+        #for topic in places_list:
+        #    if topic in article_data["places"]:
+        #        string += "," + str(PLACE_WEIGHT)
+        #    else:
+        #        string += ",0"
         dmat_file.write(string + "\n")
     dmat_file.close()
 
